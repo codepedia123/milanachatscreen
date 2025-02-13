@@ -1,0 +1,690 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <!-- Updated meta tag for viewport to disable pinch zoom -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    
+    <title>Chat Interface with JSON Input</title>
+    <script src="https://thunkable.github.io/webviewer-extension/thunkableWebviewerExtension.js" type="text/javascript"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Raleway:wght@400;600&display=swap');
+
+        body {
+            font-family: 'Raleway', sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #ffffff;
+            height: 100vh; /* Ensure the body takes the full viewport height */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 15px; /* Increased by 1px */
+            overflow-x: hidden; /* Prevent horizontal overflow */
+
+            /* Disable all touch gestures like pinch-zoom */
+            touch-action: none; 
+        }
+
+        .chat-container {
+            max-width: 100vw;
+            width: 100vw;
+            height: 100vh; /* Set the container to take up the full viewport height */
+            display: flex;
+            flex-direction: column;
+            background-color: #fff;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .json-input-container {
+            padding: 10px;
+            background-color: #e0e0e0;
+            border-bottom: 1px solid #ccc;
+            display: none; /* Hide JSON input area */
+            width: 100vw;
+        }
+
+        .json-input-container textarea {
+            width: 100%;
+            height: 100px;
+            padding: 10px;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+            font-family: 'Poppins', sans-serif;
+            font-size: 15px; /* Increased by 1px */
+        }
+
+        .json-input-container button {
+            margin-top: 10px;
+            padding: 10px 20px;
+            background-color: #000;
+            color: #fff;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 15px; /* Increased by 1px */
+            font-family: 'Poppins', sans-serif;
+        }
+
+        .chat-body {
+            padding: 10px;
+            flex: 1; /* Make chat-body take up available space */
+            overflow-y: auto;
+            background-color: #f9f9f9;
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+        }
+
+        .message {
+            display: flex;
+            align-items: center;
+            margin-bottom: 5px;
+            margin-right: 15px; /* Added more margin to the right */
+            max-width: calc(100% - 35px); /* Adjusted max-width to account for the new right margin */
+            padding: 10px;
+            box-sizing: border-box; /* Ensure padding is included within the max-width */
+        }
+
+        .message.received {
+            justify-content: flex-start;
+        }
+
+        .message.sent {
+            justify-content: flex-end;
+            align-self: flex-end;
+        }
+
+        .message-text {
+            padding: 10px;
+            border-radius: 10px;
+            background-color: #ededed;
+            color: #D8ABA2;
+            font-size: 15px; /* Increased by 1px */
+            word-wrap: break-word; /* Ensures words wrap to the next line if they exceed the container width */
+            word-break: break-all; /* Breaks long words at any character */
+            overflow-wrap: break-word; /* Ensures wrapping of long words */
+            white-space: normal; /* Allows the text to wrap normally */
+        }
+
+        .message.sent .message-text {
+            background-color: #D8ABA2;
+            color: #fff;
+        }
+
+        .message.received .message-text {
+            background-color: #e9e9e9;
+            color: #000;
+        }
+
+        .message-time {
+            display: block;
+            margin-top: 5px;
+            font-size: 13px; /* Increased by 1px */
+            color: #ffffff;
+            white-space: nowrap; /* Prevent time from wrapping */
+        }
+
+        .chat-footer {
+            display: flex;
+            flex-direction: column;
+            border-top: 1px solid #e0e0e0;
+            background-color: #fff;
+            width: 100%;
+        }
+
+        .chat-footer input[type="text"] {
+            flex: 1;
+            padding: 10px;
+            color: #D8ABA2;
+            border: 1px solid #D8ABA2; /* Added 1px border */
+            border-radius: 20px;
+            background-color: #ffffff; /* Set background to white */
+            margin-bottom: 10px;
+            font-size: 15px; /* Increased by 1px */
+            font-family: 'Raleway', sans-serif;
+            width: 100%;
+            box-sizing: border-box; /* Ensures padding and border are included in the width */
+        }
+
+        .chat-footer input[type="file"] {
+            display: none;
+        }
+
+        .chat-footer label {
+            cursor: pointer;
+            margin-right: 10px;
+            font-size: 15px; /* Increased by 1px */
+            font-family: 'Raleway', sans-serif;
+        }
+
+        .chat-footer .actions {
+            display: flex;
+            align-items: center;
+            width: 100%;
+        }
+
+        .chat-footer .status-label {
+            margin-bottom: 10px;
+            font-size: 15px; /* Increased by 1px */
+            color: #333;
+            font-family: 'Raleway', sans-serif;
+        }
+
+        .chat-footer button {
+            border: none;
+            background-color: transparent;
+            cursor: pointer;
+            font-size: 15px; /* Increased by 1px */
+            font-family: 'Raleway', sans-serif;
+        }
+
+        .chat-footer button img {
+            width: 20px;
+            height: 20px;
+        }
+
+        .chat-footer label img {
+            width: 24px;
+            height: 24px;
+        }
+
+        .recording-popup,
+        .loading-popup {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: #fff;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+            z-index: 1000;
+            text-align: center;
+            font-size: 15px; /* Increased by 1px */
+            font-family: 'Raleway', sans-serif;
+        }
+
+        .recording-popup p,
+        .loading-popup p {
+            margin: 0;
+            font-size: 15px; /* Increased by 1px */
+            color: #333;
+            font-family: 'Raleway', sans-serif;
+        }
+
+        .recording-popup button,
+        .loading-popup button {
+            margin-top: 10px;
+            padding: 10px 20px;
+            background-color: #000;
+            color: #fff;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 15px; /* Increased by 1px */
+            font-family: 'Raleway', sans-serif;
+        }
+
+        .loading-popup {
+            display: none;
+        }
+
+        .image-popup {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background-color: rgba(0, 0, 0, 0.8);
+            z-index: 1001;
+            padding: 20px;
+            display: none;
+            text-align: center;
+            font-family: 'Raleway', sans-serif;
+        }
+
+        .image-popup img {
+            max-width: 100%;
+            max-height: 90vh;
+            margin-bottom: 10px;
+            border-radius: 10px;
+        }
+
+        .image-popup button {
+            background-color: #fff;
+            color: #000;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 20px; /* Increased by 1px */
+            font-family: 'Raleway', sans-serif;
+        }
+
+    </style>
+
+</head>
+
+<body>
+    <div class="chat-container">
+        <div class="json-input-container">
+            <textarea id="json-input" placeholder="Paste JSON data here..."></textarea>
+            <button onclick="handleJsonSubmit()">Submit</button>
+        </div>
+
+        <div id="chat-body" class="chat-body">
+            <!-- Messages will be dynamically appended here -->
+        </div>
+
+        <div class="chat-footer">
+            <div id="status-label" class="status-label"></div>
+            <input type="text" id="chat-input" placeholder="Type your message here..." oninput="toggleSendButton()" onkeypress="checkEnterKey(event)">
+            <div class="actions">
+                <label for="image-input"><img src="https://res.cloudinary.com/di751ehfz/image/upload/v1730957276/image-_t0gwez.png" alt="Image"></label>
+                <input type="file" id="image-input" accept="image/*" multiple onchange="handleImageUpload()">
+                <button id="mic-button" onclick="startRecording()"><img src="https://res.cloudinary.com/di751ehfz/image/upload/v1730965451/mic_kodxzq.png" alt="Audio"></button>
+                <button id="send-button" style="display:none;" onclick="sendMessage()"><img src="https://res.cloudinary.com/di751ehfz/image/upload/v1730957559/message_cjjv1g.png" alt="Send"></button>
+            </div>
+        </div>
+
+        <div id="recording-popup" class="recording-popup" style="display:none;">
+            <p id="recording-time">Recording: 0 seconds</p>
+            <button onclick="stopRecording()">Stop</button>
+        </div>
+
+        <div id="loading-popup" class="loading-popup">
+            <p>Uploading file, please wait...</p>
+        </div>
+
+        <div id="image-popup" class="image-popup">
+            <img id="popup-image" src="" alt="Popup Image">
+            <button onclick="closeImagePopup()">Cancel</button>
+        </div>
+    </div>
+
+    <script>
+        // ----------------------------------------------------
+        // 1. Prevent pinch-zoom via touch events (multi-touch)
+        document.addEventListener('touchstart', function(event) {
+            if (event.touches.length > 1) {
+                event.preventDefault(); // Prevent multi-touch (pinch) zoom
+            }
+        }, { passive: false });
+
+        // 2. Prevent iOS gesture-based zoom
+        document.addEventListener('gesturestart', function(event) {
+            event.preventDefault(); // Block pinch zoom on iOS
+        });
+        // ----------------------------------------------------
+
+        // Add the checkEnterKey function to send the message on Enter key press
+        function checkEnterKey(event) {
+            if (event.key === 'Enter') {
+                event.preventDefault(); // Prevent form submission if inside a form
+                sendMessage(); // Send the message
+            }
+        }
+
+        let currentUserId = 1; // Default current user ID
+        let messages = []; // To store the messages
+        let uploadedImages = [];
+        let uploadedAudios = [];
+        let mediaRecorder;
+        let audioChunks = [];
+        let recordingTimer;
+        let recordingStartTime;
+
+        function showLoadingPopup() {
+            document.getElementById('loading-popup').style.display = 'block';
+        }
+
+        function hideLoadingPopup() {
+            document.getElementById('loading-popup').style.display = 'none';
+        }
+        async function uploadToCloudinary(file, fileType) {
+    // Show the loading popup to inform the user
+    showLoadingPopup();
+
+    // Create a new FormData object for the file upload
+    const formData = new FormData();
+    formData.append("file", file); // Add the file (Blob or File) to the form data
+    formData.append("upload_preset", "l7clvt2i"); // Use the provided Cloudinary upload preset
+    formData.append("public_id", `msg_${Date.now()}`); // Generate a unique public ID using the timestamp
+    formData.append("api_key", "741767567358183"); // Generate a unique public ID using the timestamp
+
+
+    // Determine the correct Cloudinary endpoint based on the file type
+    const endpoint = fileType === 'image' ? 'image' : (fileType === 'audio' ? 'video' : 'raw'); 
+    // 'raw' is used for non-image/audio/video files
+
+    try {
+        // Perform the file upload using the Cloudinary API
+        const response = await fetch(`https://api.cloudinary.com/v1_1/d7xmaqql/${endpoint}/upload`, {
+            method: "POST", // HTTP POST method for uploading files
+            body: formData, // Attach the form data
+        });
+
+        // Parse the response JSON
+        const data = await response.json();
+        console.log("Cloudinary response:", data); // Log the response for debugging
+
+        // Hide the loading popup
+        hideLoadingPopup();
+
+        // Check if the response is successful
+        if (response.ok) {
+            console.log("File successfully uploaded to Cloudinary:", data.secure_url);
+            return data.secure_url; // Return the uploaded file's secure URL
+        } else {
+            console.error("Cloudinary upload failed:", data.error.message);
+            throw new Error(data.error.message || "Cloudinary upload failed");
+        }
+    } catch (error) {
+        // Hide the loading popup in case of an error
+        hideLoadingPopup();
+        console.error("Error uploading to Cloudinary:", error.message);
+        throw new Error(error.message || "An unexpected error occurred during upload");
+    }
+}
+
+
+        function renderMessages() {
+            const chatBody = document.getElementById('chat-body');
+            chatBody.innerHTML = "";
+
+            messages.forEach((msg) => {
+                const messageType = msg.sender;
+                const newMessage = document.createElement('div');
+                newMessage.className = `message ${messageType}`;
+
+                let messageTime = '';
+                if (msg.time && !isNaN(new Date(msg.time).getTime())) {
+                    messageTime = new Date(msg.time).toLocaleString([], { hour: '2-digit', minute: '2-digit', hour12: true });
+                }
+
+                newMessage.innerHTML =
+                    `<div class="message-text">
+                        ${msg.text ? `<p>${msg.text}</p>` : ''}
+                        ${
+                          msg.images.length > 0 && msg.images[0] !== 'null' 
+                          ? msg.images.map(imageUrl => 
+                              `<img src="${imageUrl}" alt="Sent Image" style="max-width: 100%; border-radius: 10px;" onclick="openImagePopup('${imageUrl}')">`
+                            ).join('')
+                          : ''
+                        }
+                        ${msg.audioUrl && msg.audioUrl !== 'null' ? `<audio controls src="${msg.audioUrl}"></audio>` : ''}
+                        <span class="message-time">${messageTime}</span>
+                    </div>`;
+                chatBody.appendChild(newMessage);
+            });
+
+            chatBody.scrollTop = chatBody.scrollHeight; // Scroll to the bottom
+        }
+
+        function handleJsonSubmit() {
+            const jsonInput = document.getElementById('json-input').value;
+
+            try {
+                const jsonData = JSON.parse(jsonInput); // Parse the input JSON data
+
+                let combinedMessages = [];
+
+                if (Array.isArray(jsonData)) {
+                    jsonData.forEach((messageObj) => {
+                        const text = messageObj.text || '';
+                        const userId = messageObj.userId;
+                        const messageId = messageObj.messageId;
+                        const imageUrl = messageObj.imageUrl || 'null';
+                        const audioUrl = messageObj.audioUrl || 'null';
+
+                        // Extract time from messageId (assuming it's "msg_<secondsSince1970>")
+                        let time = Date.now();
+                        if (typeof messageId === 'string' && messageId.startsWith('msg_')) {
+                            const secondsSince1970 = parseInt(messageId.split('_')[1], 10);
+                            if (!isNaN(secondsSince1970)) {
+                                time = secondsSince1970 * 1000; // Convert to milliseconds
+                            }
+                        }
+
+                        combinedMessages.push({
+                            sender: userId == currentUserId ? 'sent' : 'received',
+                            text: text !== "null" ? text : '',
+                            images: imageUrl !== 'null' ? [imageUrl] : [],
+                            audioUrl: audioUrl !== 'null' ? audioUrl : '',
+                            time: time
+                        });
+                    });
+                } else {
+                    throw new Error('Invalid JSON format. Expected an array of messages.');
+                }
+
+                // Sort messages by time
+                combinedMessages.sort((a, b) => a.time - b.time);
+
+                // Update the messages array
+                messages = combinedMessages;
+
+                renderMessages();
+
+            } catch (error) {
+                console.error("Error parsing JSON data:", error.message);
+            }
+        }
+
+        async function sendMessage() {
+            const input = document.getElementById('chat-input');
+            const message = input.value.trim();
+            const currentTime = Math.floor(Date.now() / 1000); // Using seconds since 1970 for messageId
+
+            if (!message && uploadedImages.length === 0 && uploadedAudios.length === 0) {
+                console.log("No content to send");
+                return;
+            }
+
+            let messageData = {
+                sender: 'sent',
+                time: currentTime * 1000, // Store in ms internally, even though ID is in seconds
+                text: message || '',
+                images: uploadedImages,
+                audioUrl: uploadedAudios.length > 0 ? uploadedAudios[0] : ''
+            };
+
+            messages.push(messageData);
+            console.log("Message added to local array:", messageData);
+            postMessageData(messageData, currentTime);
+            renderMessages();
+            resetInputs();
+            updateJsonResponse();
+        }
+
+        function resetInputs() {
+            document.getElementById('chat-input').value = '';
+            document.getElementById('image-input').value = '';
+            uploadedImages = [];
+            uploadedAudios = [];
+            updateStatusLabel();
+            toggleSendButton();
+        }
+
+        function updateJsonResponse() {
+            const jsonData = [];
+
+            messages.forEach((msg, index) => {
+                // Create a msg ID based on seconds since 1970
+                const msgIdSeconds = Math.floor(msg.time / 1000);
+                const messageId = `msg_${msgIdSeconds}`;
+
+                jsonData.push({
+                    text: msg.text || "null",
+                    userId: msg.sender === 'sent' ? String(currentUserId) : "2",
+                    messageId: messageId,
+                    imageUrl: msg.images.length > 0 ? msg.images[0] : "null",
+                    audioUrl: msg.audioUrl || "null"
+                });
+            });
+
+            console.log("Updated JSON data:", JSON.stringify(jsonData));
+        }
+
+        function postMessageData(messageData, secondsSince1970) {
+            let base = JSON.stringify({
+                text: messageData.text,
+                userId: String(currentUserId),
+                messageId: `msg_${secondsSince1970}`,
+                imageUrl: messageData.images.length > 0 ? messageData.images[0] : 'null',
+                audioUrl: messageData.audioUrl || 'null'
+            });
+
+            ThunkableWebviewerExtension.postMessage(base);
+            console.log("Posted data:", base);
+        }
+
+        function toggleSendButton() {
+            const input = document.getElementById('chat-input').value;
+            const sendButton = document.getElementById('send-button');
+
+            if (input.trim() === "" && uploadedImages.length === 0 && uploadedAudios.length === 0) {
+                sendButton.style.display = 'none';
+            } else {
+                sendButton.style.display = 'inline-block';
+            }
+        }
+
+        function handleImageUpload() {
+            const imageInput = document.getElementById('image-input');
+            const files = Array.from(imageInput.files);
+            const imagePromises = files.map(file => {
+                return new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onloadend = async function () {
+                        try {
+                            const imageUrl = await uploadToCloudinary(reader.result, "image");
+                            resolve(imageUrl);
+                        } catch (error) {
+                            reject(error);
+                        }
+                    };
+                    reader.onerror = reject;
+                    reader.readAsDataURL(file);
+                });
+            });
+
+            Promise.all(imagePromises).then(urls => {
+                uploadedImages = urls;
+                updateStatusLabel();
+                toggleSendButton();
+                console.log("Images uploaded and URLs received:", urls);
+            }).catch(error => {
+                console.error("Error uploading images:", error);
+            });
+        }
+
+        function startRecording() {
+    navigator.mediaDevices.getUserMedia({ audio: true })
+        .then(stream => {
+            // Fix: Use an appropriate MIME type for iOS
+            const options = { mimeType: 'audio/mp4' }; // iOS prefers mp4 or default
+
+            mediaRecorder = new MediaRecorder(stream, options);
+            mediaRecorder.start();
+            audioChunks = [];
+
+            mediaRecorder.ondataavailable = event => {
+                audioChunks.push(event.data);
+            };
+
+            mediaRecorder.onstop = async () => {
+                const audioBlob = new Blob(audioChunks, { type: mediaRecorder.mimeType });
+
+                try {
+                    const audioUrl = await uploadToCloudinary(audioBlob, "audio");
+                    uploadedAudios = [audioUrl];
+                    updateStatusLabel();
+                    toggleSendButton();
+                    console.log("Audio recorded and uploaded:", audioUrl);
+                } catch (error) {
+                    console.error("Error uploading audio:", error);
+                }
+            };
+
+            showRecordingPopup();
+        })
+        .catch(error => {
+            console.error("Error accessing microphone:", error);
+            alert("Microphone access denied. Please enable it in settings.");
+        });
+}
+
+        function stopRecording() {
+            if (mediaRecorder && mediaRecorder.state === "recording") {
+                mediaRecorder.stop();
+            }
+
+            hideRecordingPopup();
+        }
+
+        function showRecordingPopup() {
+            const popup = document.getElementById('recording-popup');
+            const timeLabel = document.getElementById('recording-time');
+
+            recordingStartTime = Date.now();
+            popup.style.display = 'block';
+
+            recordingTimer = setInterval(() => {
+                const elapsedTime = Math.floor((Date.now() - recordingStartTime) / 1000);
+                timeLabel.textContent = `Recording: ${elapsedTime} seconds`;
+            }, 1000);
+        }
+
+        function hideRecordingPopup() {
+            clearInterval(recordingTimer);
+            const popup = document.getElementById('recording-popup');
+            popup.style.display = 'none';
+        }
+
+        function updateStatusLabel() {
+            const statusLabel = document.getElementById('status-label');
+            let statusText = '';
+
+            if (uploadedImages.length > 0) {
+                statusText += `${uploadedImages.length} image(s) uploaded. `;
+            }
+
+            if (uploadedAudios.length > 0) {
+                statusText += `${uploadedAudios.length} audio file(s) uploaded. `;
+            }
+
+            statusLabel.textContent = statusText.trim();
+        }
+
+        function openImagePopup(imageUrl) {
+            const imagePopup = document.getElementById('image-popup');
+            const popupImage = document.getElementById('popup-image');
+            popupImage.src = imageUrl;
+            imagePopup.style.display = 'block';
+        }
+
+        function closeImagePopup() {
+            const imagePopup = document.getElementById('image-popup');
+            imagePopup.style.display = 'none';
+        }
+
+        ThunkableWebviewerExtension.receiveMessage(function(message) {
+            if (message.charAt(0) === '$') {
+                document.getElementById('json-input').value = message.substring(1);
+                handleJsonSubmit();
+            } else if (message.charAt(0) === '%') {
+                currentUserId = parseInt(message.substring(1), 10);
+            }
+        });
+    </script>
+
+    <!-- Cloudflare or other scripts below can remain unchanged -->
+    <script defer src="https://static.cloudflareinsights.com/beacon.min.js/vcd15cbe7772f49c399c6a5babf22c1241717689176015" integrity="sha512-ZpsOmlRQV6y907TI0dKBHq9Md29nnaEIPlkf84rnaERnq6zvWvPUqr2ft8M1aS28oN72PdrCzSjY4U6VaAw1EQ==" data-cf-beacon='{"rayId":"8ef4e963fa013b16","serverTiming":{"name":{"cfExtPri":true,"cfL4":true,"cfSpeedBrain":true,"cfCacheStatus":true}},"version":"2024.10.5","token":"ef0548ffc9904e66b75bcd9134981ca0"}' crossorigin="anonymous"></script>
+</body>
+
+</html>
