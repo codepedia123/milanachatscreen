@@ -285,7 +285,7 @@
             <input type="text" id="chat-input" placeholder="Type your message here..." oninput="toggleSendButton()" onkeypress="checkEnterKey(event)">
             <div class="actions">
                 <label for="image-input"><img src="https://res.cloudinary.com/di751ehfz/image/upload/v1730957276/image-_t0gwez.png" alt="Image"></label>
-                <input type="file" id="image-input" accept="image/*" multiple onchange="handleImageUpload()">
+                <input type="file" id="image-input" accept="image/*" multiple onchange="handleImageUpload()" data-title="Clustr">
                 <button id="mic-button" onclick="startRecording()"><img src="https://res.cloudinary.com/di751ehfz/image/upload/v1730965451/mic_kodxzq.png" alt="Audio"></button>
                 <button id="send-button" style="display:none;" onclick="sendMessage()"><img src="https://res.cloudinary.com/di751ehfz/image/upload/v1730957559/message_cjjv1g.png" alt="Send"></button>
             </div>
